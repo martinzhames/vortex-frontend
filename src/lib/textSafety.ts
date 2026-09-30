@@ -158,3 +158,4 @@ export function isValidCommentLength(value: string): boolean {
   const length = normalizeCommentText(value).length;
   return length >= COMMENT_MIN_LENGTH && length <= COMMENT_MAX_LENGTH;
 }
+

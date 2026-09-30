@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useConnectivity } from "@/hooks/useConnectivity";
+import { useAnnounce } from "@/components/Announcer";
+import { useTranslation } from "@/lib/i18n/I18nProvider";
 
 /**
  * App-wide offline/connectivity-loss banner.
@@ -14,11 +16,17 @@ import { useConnectivity } from "@/hooks/useConnectivity";
  * The banner is dismissed automatically on reconnect (after a brief grace
  * period) and does NOT need a manual close button in the offline state — the
  * act of coming back online is the dismissal signal.
+ *
+ * Connectivity changes are also routed through the central Announcer so screen
+ * readers hear a single, deduplicated, polite announcement per transition
+ * (see docs/accessibility.md for the live-region policy).
  */
 export function ConnectivityBanner() {
+  const { t } = useTranslation();
   const { connectivity } = useConnectivity();
   const [visible, setVisible] = useState(false);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const announce = useAnnounce();
 
   useEffect(() => {
     if (connectivity === "offline") {
@@ -28,12 +36,22 @@ export function ConnectivityBanner() {
         dismissTimerRef.current = null;
       }
       setVisible(true);
+      announce("You appear to be offline — reconnecting", {
+        politeness: "polite",
+        key: "connectivity",
+        coalesceMs: 1000,
+      });
     } else {
       // Give the user a moment to see the "back online" state before hiding.
       dismissTimerRef.current = setTimeout(() => {
         setVisible(false);
         dismissTimerRef.current = null;
       }, 2500);
+      announce("Back online — refreshing data", {
+        politeness: "polite",
+        key: "connectivity",
+        coalesceMs: 1000,
+      });
     }
 
     return () => {
@@ -42,7 +60,7 @@ export function ConnectivityBanner() {
         dismissTimerRef.current = null;
       }
     };
-  }, [connectivity]);
+  }, [connectivity, announce]);
 
   if (!visible) return null;
 
@@ -79,7 +97,7 @@ export function ConnectivityBanner() {
               strokeLinejoin="round"
             />
           </svg>
-          <span>You appear to be offline — reconnecting&hellip;</span>
+          <span>{t("connectivity.offline")}</span>
         </>
       ) : (
         <>
@@ -98,7 +116,7 @@ export function ConnectivityBanner() {
               strokeLinejoin="round"
             />
           </svg>
-          <span>Back online — refreshing data&hellip;</span>
+          <span>{t("connectivity.online")}</span>
         </>
       )}
     </div>
